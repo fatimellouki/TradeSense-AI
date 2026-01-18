@@ -46,14 +46,8 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     jwt.init_app(app)
 
-    # CORS configuration - Allow all origins for API
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": "*",
-            "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
+    # CORS configuration - Allow all origins
+    CORS(app, supports_credentials=True)
 
     # Register blueprints
     from routes.auth import auth_bp
@@ -76,7 +70,7 @@ def create_app(config_name=None):
         return jsonify({
             'status': 'healthy',
             'service': 'TradeSense API',
-            'version': '1.0.1'
+            'version': '1.0.2'
         })
 
     # Create database tables
