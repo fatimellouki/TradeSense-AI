@@ -46,19 +46,12 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     jwt.init_app(app)
 
-    # CORS configuration - Allow Vercel frontend
-    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    # CORS configuration - Allow all origins for API
     CORS(app, resources={
         r"/api/*": {
-            "origins": [
-                frontend_url,
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://*.vercel.app"
-            ],
+            "origins": "*",
             "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
+            "allow_headers": ["Content-Type", "Authorization"]
         }
     })
 
