@@ -161,7 +161,10 @@
     },
     "positions": {
       "title": "Open Positions",
-      "no_positions": "No positions"
+      "no_positions": "No positions",
+      "close": "Close Position",
+      "closed": "Position closed",
+      "close_error": "Failed to close position"
     }
   },
   "pricing": {

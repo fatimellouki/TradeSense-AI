@@ -161,7 +161,10 @@
     },
     "positions": {
       "title": "Positions Ouvertes",
-      "no_positions": "Aucune position"
+      "no_positions": "Aucune position",
+      "close": "Fermer la Position",
+      "closed": "Position fermee",
+      "close_error": "Echec de fermeture de la position"
     }
   },
   "pricing": {

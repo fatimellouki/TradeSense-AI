@@ -47,6 +47,7 @@ interface TradingState {
   fetchPositions: () => Promise<void>;
   fetchActiveChallenge: () => Promise<void>;
   executeTrade: (symbol: string, side: 'buy' | 'sell', quantity: number, market: string) => Promise<any>;
+  closePosition: (positionId: number) => Promise<any>;
   setSelectedSymbol: (symbol: string) => void;
   setSelectedMarket: (market: string) => void;
 }
@@ -129,6 +130,26 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       set({
         isLoading: false,
         error: error.response?.data?.error || 'Trade execution failed',
+      });
+      throw error;
+    }
+  },
+
+  closePosition: async (positionId: number) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.post(`/trading/close-position/${positionId}`);
+
+      // Refresh data after closing position
+      await get().fetchActiveChallenge();
+      await get().fetchPositions();
+
+      set({ isLoading: false });
+      return response.data;
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.error || 'Failed to close position',
       });
       throw error;
     }

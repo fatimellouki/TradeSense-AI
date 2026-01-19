@@ -13,7 +13,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Brain,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 
 const SYMBOLS = {
@@ -44,6 +45,7 @@ export default function Dashboard() {
     fetchPositions,
     fetchActiveChallenge,
     executeTrade,
+    closePosition,
     setSelectedSymbol,
     setSelectedMarket,
     isLoading,
@@ -122,6 +124,36 @@ export default function Dashboard() {
       setTradeMessage({
         type: 'error',
         text: error.response?.data?.error || t('dashboard.trading.error')
+      });
+    }
+  };
+
+  const handleClosePosition = async (positionId: number, symbol: string) => {
+    setTradeMessage(null);
+    try {
+      const result = await closePosition(positionId);
+
+      if (result.data.challenge_status === 'failed') {
+        setTradeMessage({
+          type: 'error',
+          text: `${t('dashboard.trading.challenge_failed')}: ${result.data.status_reason}`
+        });
+      } else if (result.data.challenge_status === 'passed') {
+        setTradeMessage({
+          type: 'success',
+          text: t('dashboard.trading.challenge_passed')
+        });
+      } else {
+        setTradeMessage({
+          type: 'success',
+          text: `${t('dashboard.positions.closed')}: ${symbol} (${result.data.profit >= 0 ? '+' : ''}$${result.data.profit.toFixed(2)})`
+        });
+      }
+      fetchAISignals();
+    } catch (error: any) {
+      setTradeMessage({
+        type: 'error',
+        text: error.response?.data?.error || t('dashboard.positions.close_error')
       });
     }
   };
@@ -445,9 +477,19 @@ export default function Dashboard() {
                       <span className="font-medium">{pos.symbol}</span>
                       <span className="text-sm text-gray-400 ml-2">{pos.quantity}</span>
                     </div>
-                    <span className={pos.unrealized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      ${pos.unrealized_pnl?.toFixed(2)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={pos.unrealized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}>
+                        ${pos.unrealized_pnl?.toFixed(2)}
+                      </span>
+                      <button
+                        onClick={() => handleClosePosition(pos.id, pos.symbol)}
+                        disabled={isLoading || activeChallenge?.status !== 'active'}
+                        className="p-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition"
+                        title={t('dashboard.positions.close')}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
