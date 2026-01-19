@@ -276,7 +276,7 @@ def get_positions():
 @trading_bp.route('/close-position/<int:position_id>', methods=['POST'])
 @jwt_required()
 def close_position(position_id):
-    """Close an entire position"""
+    """Close an entire position by selling all holdings"""
     user_id = int(get_jwt_identity())
 
     position = Position.query.filter_by(
@@ -290,8 +290,72 @@ def close_position(position_id):
             'error': 'Position not found'
         }), 404
 
-    # Execute sell trade for the full position
-    return execute_trade()
+    # Get active challenge
+    challenge = UserChallenge.query.filter_by(
+        user_id=user_id,
+        status='active'
+    ).first()
+
+    if not challenge:
+        return jsonify({
+            'success': False,
+            'error': 'No active challenge'
+        }), 400
+
+    # Get current price
+    price_data = market_service.get_price(position.symbol)
+    if not price_data:
+        return jsonify({
+            'success': False,
+            'error': f'Could not get price for {position.symbol}'
+        }), 400
+
+    current_price = price_data['price']
+    quantity = float(position.quantity)
+    trade_value = quantity * current_price
+
+    # Calculate profit
+    profit = (current_price - float(position.entry_price)) * quantity
+
+    # Create closing trade
+    trade = Trade(
+        user_id=user_id,
+        challenge_id=challenge.id,
+        symbol=position.symbol,
+        market=position.market,
+        side='sell',
+        quantity=quantity,
+        entry_price=float(position.entry_price),
+        exit_price=current_price,
+        profit=profit,
+        status='closed',
+        closed_at=datetime.utcnow()
+    )
+
+    # Update balance and P&L
+    challenge.current_balance = float(challenge.current_balance) + trade_value
+    challenge.total_pnl = float(challenge.total_pnl or 0) + profit
+    challenge.daily_pnl = float(challenge.daily_pnl or 0) + profit
+
+    # Remove position
+    db.session.delete(position)
+    db.session.add(trade)
+    db.session.commit()
+
+    # Evaluate challenge rules (The Killer Function)
+    status, reason = challenge_engine.evaluate_rules(challenge.id)
+
+    return jsonify({
+        'success': True,
+        'message': f'Position closed successfully',
+        'data': {
+            'trade': trade.to_dict(),
+            'profit': profit,
+            'challenge_status': status,
+            'status_reason': reason if status != 'active' else None,
+            'new_balance': float(challenge.current_balance)
+        }
+    })
 
 
 @trading_bp.route('/signals', methods=['GET'])
